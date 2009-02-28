@@ -113,7 +113,7 @@ Juggernaut.fn.subscribe = function(channel) {
         handshake.type = "add_channels_to_client";
         handshake.channels = [channel];
         this.sendData(Juggernaut.toJSON(handshake));
-        this.logger("Subscribed to channel: " + channel);
+        this.logger("Subscribed to channel '" + channel + "'");
     }
 };
 
@@ -126,7 +126,7 @@ Juggernaut.fn.unsubscribe = function(channel) {
         handshake.type = "remove_channels_from_client";
         handshake.channels = [channel];
         this.sendData(Juggernaut.toJSON(handshake));
-        this.logger("Unsubscribed from channel: " + channel);
+        this.logger("Unsubscribed from channel '" + channel + "'");
     }
 };
 
