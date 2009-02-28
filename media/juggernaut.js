@@ -130,6 +130,15 @@ Juggernaut.fn.unsubscribe = function(channel) {
     }
 };
 
+Juggernaut.fn.publish = function(channel, data) {
+    if(this.is_connected && this.options.channels.indexOf(channel) != -1) {
+        this.broadcast(data, null, null, [channel]);
+        this.logger("Published data:\n" + Juggernaut.toJSON(data) + "\nto '" + channel + "' channel");
+    } else {
+        this.logger("You are not subscribed to channel '" + channel + "'");
+    }
+};
+
 var juggernaut;
 
 // Prototype specific - override for other frameworks
