@@ -104,7 +104,7 @@ Juggernaut.fn.receiveData = function(e) {
      eval(msg.body);
 };
 
-Juggernaut.fn.connectToChannel = function(channel) {
+Juggernaut.fn.subscribe = function(channel) {
     if(this.is_connected && this.options.channels.indexOf(channel) == -1) {
         this.options.channels.push(channel);
 
@@ -113,11 +113,11 @@ Juggernaut.fn.connectToChannel = function(channel) {
         handshake.type = "add_channels_to_client";
         handshake.channels = [channel];
         this.sendData(Juggernaut.toJSON(handshake));
-        this.logger("Connecting to channel: " + channel);
+        this.logger("Subscribed to channel: " + channel);
     }
 };
 
-Juggernaut.fn.disconnectFromChannel = function(channel) {
+Juggernaut.fn.unsubscribe = function(channel) {
     if(this.is_connected && this.options.channels.indexOf(channel) != -1) {
         this.options.channels.splice(this.options.channels.indexOf(channel), 1);
 
@@ -126,7 +126,7 @@ Juggernaut.fn.disconnectFromChannel = function(channel) {
         handshake.type = "remove_channels_from_client";
         handshake.channels = [channel];
         this.sendData(Juggernaut.toJSON(handshake));
-        this.logger("Disconnecting from channel: " + channel);
+        this.logger("Unsubscribed from channel: " + channel);
     }
 };
 
