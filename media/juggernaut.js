@@ -86,13 +86,14 @@ Juggernaut.fn.handshake = function() {
 };
 
 Juggernaut.fn.connected = function(e) {
+    var that = this;
     var json = Juggernaut.toJSON(this.handshake());
     this.sendData(json);
     this.ever_been_connected = true;
     this.is_connected = true;
     setTimeout(function(){
-      if(this.is_connected) this.attempting_to_reconnect = false;
-    }.bind(this), 1 * 1000);
+      if(that.is_connected) that.attempting_to_reconnect = false;
+    }, 1 * 1000);
     this.logger('Connected');
     this.fire_event('connected');
 };
@@ -222,6 +223,7 @@ Juggernaut.fn.disconnected = function(e) {
 
 Juggernaut.fn.reconnect = function(){
     if(this.options.reconnect_attempts){
+        var that = this;
         this.attempting_to_reconnect = true;
         this.fire_event('reconnect');
         this.logger('Will attempt to reconnect ' + this.options.reconnect_attempts + ' times,\
@@ -229,15 +231,15 @@ the first in ' + (this.options.reconnect_intervals || 3) + ' seconds');
 
         for(var i=0; i < this.options.reconnect_attempts; i++){
             setTimeout(function(){
-                if(!this.is_connected){
-                    this.logger('Attempting reconnect');
-                    if(!this.ever_been_connected){
-                        this.refreshFlashObject();
+                if(!that.is_connected){
+                    that.logger('Attempting reconnect');
+                    if(!that.ever_been_connected){
+                        that.refreshFlashObject();
                     } else {
-                        this.connect();
+                        that.connect();
                     }
                 }
-            }.bind(this), (this.options.reconnect_intervals || 3) * 1000 * (i + 1));
+            }, (this.options.reconnect_intervals || 3) * 1000 * (i + 1));
         }
     }
 };
