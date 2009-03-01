@@ -27,7 +27,7 @@ function Juggernaut(options) {
     this.ever_been_connected = false;
     this.hasLogger = "console" in window && "log" in window.console;
     this.options = options;
-    this.options.channels = this.options.channels || []; // TODO use channels_callback.keys instead
+    this.options.channels = this.options.channels || []; // TODO used only in handshake method
     this.options.channels_callbacks = {};
     this.bindToWindow();
   }
@@ -112,8 +112,8 @@ Juggernaut.fn.receiveData = function(e) {
 
 Juggernaut.fn.subscribe = function(channel, callback) {
     if (typeof callback != "function") throw new Error("You must specify a callback function");
-    if(this.is_connected && this.options.channels.indexOf(channel) == -1) {
-        this.options.channels.push(channel);
+
+    if (this.is_connected && !(channel in this.options.channels_callbacks)) {
         this.options.channels_callbacks[channel] = callback;
 
         var handshake = this.handshake();
@@ -122,12 +122,14 @@ Juggernaut.fn.subscribe = function(channel, callback) {
         handshake.channels = [channel];
         this.sendData(Juggernaut.toJSON(handshake));
         this.logger("Subscribed to channel '" + channel + "'");
+    } else {
+        this.logger("You are already subscribed to channel '" + channel + "'");
     }
 };
 
 Juggernaut.fn.unsubscribe = function(channel) {
-    if(this.is_connected && this.options.channels.indexOf(channel) != -1) {
-        this.options.channels.splice(this.options.channels.indexOf(channel), 1);
+    if(this.is_connected && (channel in this.options.channels_callbacks)) {
+        delete this.options.channels_callbacks[channel];
 
         var handshake = this.handshake();
         handshake.command = "query";
@@ -135,11 +137,13 @@ Juggernaut.fn.unsubscribe = function(channel) {
         handshake.channels = [channel];
         this.sendData(Juggernaut.toJSON(handshake));
         this.logger("Unsubscribed from channel '" + channel + "'");
+    } else {
+        this.logger("You are not subscribed to channel '" + channel + "'");
     }
 };
 
 Juggernaut.fn.publish = function(channel, data) {
-    if(this.is_connected && this.options.channels.indexOf(channel) != -1) {
+    if(this.is_connected && (channel in this.options.channels_callbacks)) {
         this.broadcast(data, null, null, [channel]);
         this.logger("Published data:\n" + Juggernaut.toJSON(data) + "\nto '" + channel + "' channel");
     } else {
