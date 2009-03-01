@@ -27,7 +27,8 @@ function Juggernaut(options) {
     this.ever_been_connected = false;
     this.hasLogger = "console" in window && "log" in window.console;
     this.options = options;
-    this.options.channels = this.options.channels || [];
+    this.options.channels = this.options.channels || []; // TODO use channels_callback.keys instead
+    this.options.channels_callbacks = {};
     this.bindToWindow();
   }
 
@@ -45,8 +46,8 @@ Juggernaut.fn.initialized = function(){
     this.connect();
 };
 
-Juggernaut.fn.broadcast = function(body, type, client_ids, channels){
-    var msg = {command: 'broadcast', body: body, type: (type||'to_channels')};
+Juggernaut.fn.broadcast = function(data, type, client_ids, channels){
+    var msg = {command: 'broadcast', data: data, type: (type||'to_channels')};
     if(channels)  msg['channels'] = channels;
     if(client_ids) msg['client_ids'] = client_ids;
     this.sendData(Juggernaut.toJSON(msg));
@@ -100,13 +101,19 @@ Juggernaut.fn.receiveData = function(e) {
      var msg = Juggernaut.parseJSON(unescape(e.toString()));
      this.currentMsgId = msg.id;
      this.currentSignature = msg.signature;
-     this.logger("Received data:\n" + msg.body + "\n");
-     eval(msg.body);
+     this.logger("Received data:\n" + Juggernaut.toJSON(msg) + "\n");
+     if (msg.channel) {
+         this.options.channels_callbacks[msg.channel](msg.data);
+     } else {
+         eval(msg.data);
+     }
 };
 
-Juggernaut.fn.subscribe = function(channel) {
+Juggernaut.fn.subscribe = function(channel, callback) {
+    if (typeof callback != "function") throw new Error("You must specify a callback function");
     if(this.is_connected && this.options.channels.indexOf(channel) == -1) {
         this.options.channels.push(channel);
+        this.options.channels_callbacks[channel] = callback;
 
         var handshake = this.handshake();
         handshake.command = "query";

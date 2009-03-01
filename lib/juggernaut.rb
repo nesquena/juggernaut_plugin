@@ -10,7 +10,7 @@ module Juggernaut
     def send_to_all(data)
       fc = {
         :command   => :broadcast,
-        :body      => data, 
+        :data      => data, 
         :type      => :to_channels,
         :channels  => []
       }
@@ -20,7 +20,7 @@ module Juggernaut
     def send_to_channels(data, channels)
       fc = {
         :command   => :broadcast,
-        :body      => data, 
+        :data      => data, 
         :type      => :to_channels,
         :channels  => channels
       }
@@ -31,7 +31,7 @@ module Juggernaut
     def send_to_clients(data, client_ids)
       fc = {
         :command    => :broadcast,
-        :body       => data, 
+        :data       => data, 
         :type       => :to_clients,
         :client_ids => client_ids
       }
@@ -42,7 +42,7 @@ module Juggernaut
     def send_to_clients_on_channels(data, client_ids, channels)
       fc = {
         :command    => :broadcast,
-        :body       => data, 
+        :data       => data, 
         :type       => :to_clients,
         :client_ids => client_ids,
         :channels   => channels
