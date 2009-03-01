@@ -29,6 +29,7 @@ function Juggernaut(options) {
     this.options = options;
     this.options.channels = this.options.channels || []; // TODO used only in handshake method
     this.options.channels_callbacks = {};
+    this.emptyFunction = function() {};
     this.bindToWindow();
   }
 
@@ -103,7 +104,7 @@ Juggernaut.fn.receiveData = function(e) {
      this.currentMsgId = msg.id;
      this.currentSignature = msg.signature;
      this.logger("Received data:\n" + Juggernaut.toJSON(msg) + "\n");
-     if (msg.channel) {
+     if (msg.channel && !(this.options.channels_callbacks[msg.channel] == this.emptyFunction)) {
          this.options.channels_callbacks[msg.channel](msg.data);
      } else {
          eval(msg.data);
@@ -111,7 +112,7 @@ Juggernaut.fn.receiveData = function(e) {
 };
 
 Juggernaut.fn.subscribe = function(channel, callback) {
-    if (typeof callback != "function") throw new Error("You must specify a callback function");
+    if (typeof callback != "function") callback = this.emptyFunction;
 
     if (this.is_connected && !(channel in this.options.channels_callbacks)) {
         this.options.channels_callbacks[channel] = callback;
