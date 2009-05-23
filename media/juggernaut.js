@@ -100,7 +100,12 @@ Juggernaut.fn.receiveData = function(e) {
      this.currentMsgId = msg.id;
      this.currentSignature = msg.signature;
      this.logger("Received data:\n" + msg.body + "\n");
-     eval(msg.body); 
+     this.dispatchMessage(msg.body);
+  }
+
+// Override this method if you don't want to eval everything from the server
+Juggernaut.fn.dispatchMessage = function(body) {
+     eval(body);
   }
 
 var juggernaut;
