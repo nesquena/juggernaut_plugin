@@ -10,7 +10,7 @@ module Juggernaut
     def send_to_all(data)
       fc = {
         :command   => :broadcast,
-        :body      => data, 
+        :data      => data, 
         :type      => :to_channels,
         :channels  => []
       }
@@ -20,7 +20,7 @@ module Juggernaut
     def send_to_channels(data, channels)
       fc = {
         :command   => :broadcast,
-        :body      => data, 
+        :data      => data, 
         :type      => :to_channels,
         :channels  => channels
       }
@@ -31,7 +31,7 @@ module Juggernaut
     def send_to_clients(data, client_ids)
       fc = {
         :command    => :broadcast,
-        :body       => data, 
+        :data       => data, 
         :type       => :to_clients,
         :client_ids => client_ids
       }
@@ -42,7 +42,7 @@ module Juggernaut
     def send_to_clients_on_channels(data, client_ids, channels)
       fc = {
         :command    => :broadcast,
-        :body       => data, 
+        :data       => data, 
         :type       => :to_clients,
         :client_ids => client_ids,
         :channels   => channels
@@ -99,6 +99,15 @@ module Juggernaut
       send_data(fc, true).flatten
     end
     alias show_clients_for_channel show_clients_for_channels
+
+    def show_channels_for_client(client_id)
+      fc = {
+        :command    => :query,
+        :type       => :show_channels_for_client,
+        :client_id  => client_id
+      }
+      send_data(fc, true).flatten
+    end
 
     def send_data(hash, response = false)
       hash[:channels]   = Array(hash[:channels])   if hash[:channels]
@@ -181,17 +190,17 @@ module Juggernaut
               juggernaut_needs options, :client_ids
               Juggernaut.send_to_clients(data, options[:client_ids])
             when :send_to_client_on_channel:
-              juggernaut_needs options, :client_id, :channels
-              Juggernaut.send_to_clients_on_channel(data, options[:client_id], options[:channels])
+              juggernaut_needs options, :client_id, :channel
+              Juggernaut.send_to_clients_on_channels(data, options[:client_id], options[:channel])
             when :send_to_clients_on_channel:
               juggernaut_needs options, :client_ids, :channel
-              Juggernaut.send_to_clients_on_channel(data, options[:client_ids], options[:channel])
+              Juggernaut.send_to_clients_on_channels(data, options[:client_ids], options[:channel])
             when :send_to_client_on_channels:
-              juggernaut_needs options, :client_ids, :channel
-              Juggernaut.send_to_clients_on_channel(data, options[:client_id], options[:channels])
+              juggernaut_needs options, :client_id, :channels
+              Juggernaut.send_to_clients_on_channels(data, options[:client_id], options[:channels])
             when :send_to_clients_on_channels:
-              juggernaut_needs options, :client_ids, :channel
-              Juggernaut.send_to_clients_on_channel(data, options[:client_ids], options[:channels])
+              juggernaut_needs options, :client_ids, :channels
+              Juggernaut.send_to_clients_on_channels(data, options[:client_ids], options[:channels])
           end
         end
 

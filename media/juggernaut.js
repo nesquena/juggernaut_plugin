@@ -27,6 +27,9 @@ function Juggernaut(options) {
     this.ever_been_connected = false;
     this.hasLogger = "console" in window && "log" in window.console;
     this.options = options;
+    this.options.channels = this.options.channels || []; // TODO used only in handshake method
+    this.options.channels_callbacks = {};
+    this.emptyFunction = function() {};
     this.bindToWindow();
 };
 
@@ -44,32 +47,28 @@ Juggernaut.fn.initialized = function() {
     this.connect();
 };
 
-Juggernaut.fn.broadcast = function(body, type, client_ids, channels) {
-    var msg = {
-        command: 'broadcast',
-        body: body,
-        type: (type || 'to_channels')
-    };
-    if (channels) msg['channels'] = channels;
-    if (client_ids) msg['client_ids'] = client_ids;
+Juggernaut.fn.broadcast = function(data, type, client_ids, channels){
+    var msg = {command: 'broadcast', data: data, type: (type||'to_channels')};
+    if(channels)  msg['channels'] = channels;
+    if(client_ids) msg['client_ids'] = client_ids;
     this.sendData(Juggernaut.toJSON(msg));
 };
 
-Juggernaut.fn.sendData = function(data) {
+Juggernaut.fn.sendData = function(data){
     this.swf().sendData(escape(data));
 };
 
-Juggernaut.fn.connect = function() {
-    if (!this.is_connected) {
-        this.fire_event('connect');
-        this.swf().connect(this.options.host, this.options.port);
+Juggernaut.fn.connect = function(){
+    if(!this.is_connected){
+      this.fire_event('connect');
+      this.swf().connect(this.options.host, this.options.port);
     }
 };
 
-Juggernaut.fn.disconnect = function() {
-    if (this.is_connected) {
-        this.swf().disconnect();
-        this.is_connected = false;
+Juggernaut.fn.disconnect = function(){
+    if(this.is_connected) {
+      this.swf().disconnect();
+      this.is_connected = false;
     }
 };
 
@@ -88,23 +87,69 @@ Juggernaut.fn.handshake = function() {
 };
 
 Juggernaut.fn.connected = function(e) {
+    var that = this;
     var json = Juggernaut.toJSON(this.handshake());
     this.sendData(json);
     this.ever_been_connected = true;
     this.is_connected = true;
-    setTimeout(function() {
-        if (this.is_connected) this.attempting_to_reconnect = false;
-    }.bind(this), 1 * 1000);
+    setTimeout(function(){
+      if(that.is_connected) that.attempting_to_reconnect = false;
+    }, 1 * 1000);
     this.logger('Connected');
     this.fire_event('connected');
 };
 
 Juggernaut.fn.receiveData = function(e) {
-    var msg = Juggernaut.parseJSON(unescape(e.toString()));
-    this.currentMsgId = msg.id;
-    this.currentSignature = msg.signature;
-    this.logger("Received data:n" + msg.body + "n");
-    eval(msg.body);
+     var msg = Juggernaut.parseJSON(unescape(e.toString()));
+     this.currentMsgId = msg.id;
+     this.currentSignature = msg.signature;
+     this.logger("Received data:\n" + Juggernaut.toJSON(msg) + "\n");
+     if (msg.channel && !(this.options.channels_callbacks[msg.channel] == this.emptyFunction)) {
+         this.options.channels_callbacks[msg.channel](msg.data);
+     } else {
+         eval(msg.data);
+     }
+};
+
+Juggernaut.fn.subscribe = function(channel, callback) {
+    if (typeof callback != "function") callback = this.emptyFunction;
+
+    if (this.is_connected && !(channel in this.options.channels_callbacks)) {
+        this.options.channels_callbacks[channel] = callback;
+
+        var handshake = this.handshake();
+        handshake.command = "query";
+        handshake.type = "add_channels_to_client";
+        handshake.channels = [channel];
+        this.sendData(Juggernaut.toJSON(handshake));
+        this.logger("Subscribed to channel '" + channel + "'");
+    } else {
+        this.logger("You are already subscribed to channel '" + channel + "'");
+    }
+};
+
+Juggernaut.fn.unsubscribe = function(channel) {
+    if(this.is_connected && (channel in this.options.channels_callbacks)) {
+        delete this.options.channels_callbacks[channel];
+
+        var handshake = this.handshake();
+        handshake.command = "query";
+        handshake.type = "remove_channels_from_client";
+        handshake.channels = [channel];
+        this.sendData(Juggernaut.toJSON(handshake));
+        this.logger("Unsubscribed from channel '" + channel + "'");
+    } else {
+        this.logger("You are not subscribed to channel '" + channel + "'");
+    }
+};
+
+Juggernaut.fn.publish = function(channel, data) {
+    if(this.is_connected && (channel in this.options.channels_callbacks)) {
+        this.broadcast(data, null, null, [channel]);
+        this.logger("Published data:\n" + Juggernaut.toJSON(data) + "\nto '" + channel + "' channel");
+    } else {
+        this.logger("You are not subscribed to channel '" + channel + "'");
+    }
 };
 
 var juggernaut;
@@ -115,13 +160,10 @@ Juggernaut.fn.fire_event = function(fx_name) {
 };
 
 Juggernaut.fn.bindToWindow = function() {
-
-    Event.observe(window, 'load',
-    function() {
+    Event.observe(window, 'load', function() {
         juggernaut = this;
         this.appendFlashObject();
     }.bind(this));
-
 };
 
 Juggernaut.toJSON = function(hash) {
@@ -132,17 +174,13 @@ Juggernaut.parseJSON = function(string) {
     return string.evalJSON();
 };
 
-Juggernaut.fn.swf = function() {
+Juggernaut.fn.swf = function(){
     return $(this.options.swf_name);
 };
 
 Juggernaut.fn.appendElement = function() {
-    this.element = new Element('div', {
-        id: 'juggernaut'
-    });
-    $(document.body).insert({
-        bottom: this.element
-    });
+    this.element = new Element('div', { id: 'juggernaut' });
+    $(document.body).insert({ bottom: this.element });
 };
 
 /*** END PROTOTYPE SPECIFIC ***/
@@ -153,20 +191,15 @@ Juggernaut.fn.appendFlashObject = function() {
     }
     Juggernaut.fn.appendElement();
     swfobject.embedSWF(
-    this.options.swf_address,
-    'juggernaut',
-    this.options.width,
-    this.options.height,
-    String(this.options.flash_version),
-    this.options.ei_swf_address,
-    {
-        'bridgeName': this.options.bridge_name
-    },
-    {},
-    {
-        'id': this.options.swf_name,
-        'name': this.options.swf_name
-    }
+      this.options.swf_address,
+      'juggernaut',
+      this.options.width,
+      this.options.height,
+      String(this.options.flash_version),
+      this.options.ei_swf_address,
+      {'bridgeName': this.options.bridge_name},
+      {},
+      {'id': this.options.swf_name, 'name': this.options.swf_name}
     );
 };
 
@@ -193,22 +226,25 @@ Juggernaut.fn.disconnected = function(e) {
     }
 };
 
-Juggernaut.fn.reconnect = function() {
-    if (this.options.reconnect_attempts) {
+Juggernaut.fn.reconnect = function(){
+    if(this.options.reconnect_attempts){
+        var that = this;
         this.attempting_to_reconnect = true;
         this.fire_event('reconnect');
-        this.logger('Will attempt to reconnect ' + this.options.reconnect_attempts + ' times, the first in ' + (this.options.reconnect_intervals || 3) + ' seconds');
-        for (var i = 0; i < this.options.reconnect_attempts; i++) {
-            setTimeout(function() {
-                if (!this.is_connected) {
-                    this.logger('Attempting reconnect');
-                    if (!this.ever_been_connected) {
-                        this.refreshFlashObject();
+        this.logger('Will attempt to reconnect ' + this.options.reconnect_attempts + ' times,\
+the first in ' + (this.options.reconnect_intervals || 3) + ' seconds');
+
+        for(var i=0; i < this.options.reconnect_attempts; i++){
+            setTimeout(function(){
+                if(!that.is_connected){
+                    that.logger('Attempting reconnect');
+                    if(!that.ever_been_connected){
+                        that.refreshFlashObject();
                     } else {
-                        this.connect();
+                        that.connect();
                     }
                 }
-            }.bind(this), (this.options.reconnect_intervals || 3) * 1000 * (i + 1));
+            }, (this.options.reconnect_intervals || 3) * 1000 * (i + 1));
         }
     }
 };
