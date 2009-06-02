@@ -107,8 +107,13 @@ Juggernaut.fn.receiveData = function(e) {
      if (msg.channel && !(this.options.channels_callbacks[msg.channel] == this.emptyFunction)) {
          this.options.channels_callbacks[msg.channel](msg.data);
      } else {
-         eval(msg.data);
+        this.dispatchMessage(msg.body);
      }
+};
+
+// Override this method if you don't want to eval everything from the server
+Juggernaut.fn.dispatchMessage = function(body) {
+     eval(body);
 };
 
 Juggernaut.fn.subscribe = function(channel, callback) {
